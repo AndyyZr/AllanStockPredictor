@@ -1,26 +1,35 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import requests
 
-st.title("📊 Stock Predictor (Simple Version)")
+st.title("📊 Stock Predictor")
 
-# Dropdown for stock selection
-stocks = ["AAPL", "TSLA", "AMZN", "MSFT", "GOOG"]
-ticker = st.selectbox("Choose a stock:", stocks)
+# Get list of S&P 500 tickers
+@st.cache_data
+def load_sp500_tickers():
+    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    tables = pd.read_html(url)
+    df = tables[0]
+    return df["Symbol"].tolist()
 
-# Fetch stock data
-data = yf.download(ticker, period="6mo")
+tickers = load_sp500_tickers()
 
-# Simple trend predictor
-if len(data) > 2:
-    last_close = data["Close"].iloc[-1]
-    prev_close = data["Close"].iloc[-2]
+# Dropdown for all S&P 500 stocks
+ticker = st.selectbox("Choose a stock:", tickers)
 
-    if last_close > prev_close:
-        st.success(f"📈 {ticker} looks like it’s going UP")
+if st.button("Predict"):
+    data = yf.download(ticker, period="6mo")
+
+    if data.empty:
+        st.error("⚠️ No data found for this stock.")
     else:
-        st.error(f"📉 {ticker} looks like it’s going DOWN")
+        last_close = data["Close"].iloc[-1]
+        prev_close = data["Close"].iloc[-2]
 
-# Show chart
-st.line_chart(data["Close"])
+        if last_close > prev_close:
+            st.success(f"📈 {ticker} looks like it’s going UP")
+        else:
+            st.error(f"📉 {ticker} looks like it’s going DOWN")
 
+        st.line_chart(data["Close"])
